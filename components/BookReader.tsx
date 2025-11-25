@@ -10,7 +10,7 @@ export default function BookReader() {
     const bookUrl = searchParams.get('book') ? `/api/book-content?filename=${encodeURIComponent(searchParams.get('book')!)}` : null;
 
     const [location, setLocation] = useState<string | number>(0);
-    const [isPlaying, setIsPlaying] = useState(true);
+    const [isPlaying, setIsPlaying] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
     const [rate, setRate] = useState(1.5);
     const renditionRef = useRef<any>(null);
@@ -19,11 +19,17 @@ export default function BookReader() {
     const originalStyleRef = useRef<string | null>(null);
     const isPlayingRef = useRef(false);
     const autoPageTurnRef = useRef(false);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
 
-    // Initialize SpeechSynthesis
+    // Initialize SpeechSynthesis and Audio
     useEffect(() => {
         if (typeof window !== 'undefined') {
             synthRef.current = window.speechSynthesis;
+            // Create silent audio element for background playback hack
+            // 1s of silent mp3
+            const silentMp3 = "data:audio/mp3;base64,SUQzBAAAAAAAI1RTSVMAAAAPAAADTGF2ZjU4LjIwLjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMD//////////////////////////////////////////////////////////////////wAAAAAATGF2YzU4LjM1AAAAAAAAAAAAAAAAJAAAAAAAAAAAASAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAA";
+            audioRef.current = new Audio(silentMp3);
+            audioRef.current.loop = true;
         }
         return () => {
             stopReading();
@@ -57,6 +63,11 @@ export default function BookReader() {
             synthRef.current.cancel();
         }
 
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+        }
+
         // Restore original style
         if (currentElementRef.current && originalStyleRef.current !== null) {
             currentElementRef.current.style.cssText = originalStyleRef.current;
@@ -70,9 +81,11 @@ export default function BookReader() {
 
         if (isPaused) {
             synthRef.current.resume();
+            if (audioRef.current) audioRef.current.play();
             setIsPaused(false);
         } else {
             synthRef.current.pause();
+            if (audioRef.current) audioRef.current.pause();
             setIsPaused(true);
         }
     };
@@ -87,6 +100,32 @@ export default function BookReader() {
         // Stop any current reading
         if (synthRef.current.speaking) {
             synthRef.current.cancel();
+        }
+
+        // Start silent audio to keep background active
+        if (audioRef.current) {
+            audioRef.current.play().catch(e => console.log("Audio play failed:", e));
+        }
+
+        // Setup Media Session
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: searchParams.get('book') || 'Book',
+                artist: 'Booker Reader',
+                album: 'Audiobook',
+                artwork: [
+                    { src: '/file.svg', sizes: '96x96', type: 'image/svg+xml' },
+                    { src: '/file.svg', sizes: '128x128', type: 'image/svg+xml' },
+                ]
+            });
+
+            navigator.mediaSession.setActionHandler('play', () => togglePause());
+            navigator.mediaSession.setActionHandler('pause', () => togglePause());
+            navigator.mediaSession.setActionHandler('stop', () => stopReading());
+            navigator.mediaSession.setActionHandler('nexttrack', () => {
+                // Skip to next paragraph if possible, or just ignore
+                // readNext() is internal, maybe expose it or just let it be
+            });
         }
 
         // Restore previous element style if it's different
