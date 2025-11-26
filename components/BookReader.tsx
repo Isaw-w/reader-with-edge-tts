@@ -102,9 +102,16 @@ export default function BookReader() {
         }
     }, []);
 
-    // Save voice setting
+    // Save voice setting and clear prefetch when voice changes
     useEffect(() => {
         localStorage.setItem('tts-voice', voice);
+
+        // Clear prefetched audio when voice changes so next paragraph uses new voice
+        if (nextAudioDataRef.current) {
+            URL.revokeObjectURL(nextAudioDataRef.current.url);
+            nextAudioDataRef.current = null;
+            console.log('Cleared prefetched audio due to voice change');
+        }
     }, [voice]);
 
     // Save rate setting
