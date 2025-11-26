@@ -4,13 +4,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ReactReader, ReactReaderStyle } from 'react-reader';
 import { useSearchParams } from 'next/navigation';
 import { BrowserCommunicate } from '../utils/edge-tts-universal';
+import PdfReader, { PdfReaderHandle } from './PdfReader';
 
 
 export default function BookReader() {
     const searchParams = useSearchParams();
     const bookUrl = searchParams.get('book') ? `/api/book-content?filename=${encodeURIComponent(searchParams.get('book')!)}` : null;
+    const isPdf = bookUrl?.toLowerCase().includes('.pdf');
 
-    const [location, setLocation] = useState<string | number>(0);
+    const [location, setLocation] = useState<string | number>(isPdf ? 1 : 0);
+    const [isLoadingProgress, setIsLoadingProgress] = useState(true);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
     const [rate, setRate] = useState(1.0); // Edge TTS rate is usually 1.0 base, can adjust string "+10%" etc but for now keep simple
@@ -18,6 +21,7 @@ export default function BookReader() {
     const [voice, setVoice] = useState('zh-CN-shaanxi-XiaoniNeural');
     const [showPanel, setShowPanel] = useState(true);
     const renditionRef = useRef<any>(null);
+    const pdfReaderRef = useRef<PdfReaderHandle>(null);
     const currentElementRef = useRef<HTMLElement | null>(null);
     const originalStyleRef = useRef<string | null>(null);
     const isPlayingRef = useRef(false);
@@ -71,10 +75,16 @@ export default function BookReader() {
         if (bookUrl) {
             const savedLocation = localStorage.getItem(`book-progress-${bookUrl}`);
             if (savedLocation) {
-                setLocation(savedLocation);
+                // If PDF, parse as int
+                if (isPdf) {
+                    setLocation(parseInt(savedLocation, 10));
+                } else {
+                    setLocation(savedLocation);
+                }
             }
+            setIsLoadingProgress(false);
         }
-    }, [bookUrl]);
+    }, [bookUrl, isPdf]);
 
     // Load voice and speed settings
     useEffect(() => {
@@ -97,6 +107,17 @@ export default function BookReader() {
     useEffect(() => {
         localStorage.setItem('tts-rate', rate.toString());
     }, [rate]);
+
+    // PDF Auto-read on page turn
+    useEffect(() => {
+        if (isPdf && isPlaying && pdfReaderRef.current) {
+            const readPage = async () => {
+                const text = await pdfReaderRef.current?.getCurrentPageText();
+                if (text) startReading(text);
+            };
+            readPage();
+        }
+    }, [location, isPdf]);
 
     const handleLocationChanged = React.useCallback((loc: string | number) => {
         setLocation(loc);
@@ -186,6 +207,14 @@ export default function BookReader() {
     };
 
     const resumeReading = async () => {
+        if (isPdf) {
+            if (pdfReaderRef.current) {
+                const text = await pdfReaderRef.current.getCurrentPageText();
+                if (text) startReading(text);
+            }
+            return;
+        }
+
         if (!currentBodyRef.current) return;
 
         // Try to resume from current location if it's a CFI
@@ -378,6 +407,13 @@ export default function BookReader() {
     };
 
     const readPrevious = () => {
+        if (isPdf) {
+            if (pdfReaderRef.current) {
+                pdfReaderRef.current.goToPrevPage();
+            }
+            return;
+        }
+
         if (!currentElementRef.current || !currentBodyRef.current) return;
 
         const candidates = getReadingCandidates(currentBodyRef.current);
@@ -391,7 +427,14 @@ export default function BookReader() {
         }
     };
 
-    const readNext = () => {
+    const readNext = async () => {
+        if (isPdf) {
+            if (pdfReaderRef.current) {
+                pdfReaderRef.current.goToNextPage();
+            }
+            return;
+        }
+
         if (!currentElementRef.current || !currentBodyRef.current) {
             stopReading();
             return;
@@ -591,32 +634,50 @@ export default function BookReader() {
             className="w-screen relative overflow-hidden transition-[height] duration-300 ease-in-out"
             style={{ height: '93vh' }}
         >
-            <div className="absolute top-4 left-4 z-10">
-                <a href="/" className="px-4 py-2 bg-white/80 backdrop-blur rounded-lg shadow-sm hover:bg-white transition-colors text-sm font-medium">
-                    ← Library
+            <div className="fixed top-4 left-4 z-50">
+                <a href="/" className="flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur shadow-sm rounded-full hover:bg-white hover:shadow transition-all text-gray-600 hover:text-gray-900">
+                    <span>←</span>
+                    <span className="font-medium">Library</span>
                 </a>
             </div>
 
-            <ReactReader
-                url={bookData}
-                location={location}
-                locationChanged={handleLocationChanged}
-                getRendition={getRendition}
-                swipeable={false} // Disable swipe to fix text selection on mobile
-                epubOptions={{
-                    // Using default paginated view for better performance and stability
-                    allowScriptedContent: true,
-                }}
-                readerStyles={{
-                    ...ReactReaderStyle,
-                    readerArea: {
-                        ...ReactReaderStyle.readerArea,
-                        backgroundColor: '#fafafa',
-                        // Padding handled by container resizing now, but keeping a bit doesn't hurt
-                        // paddingBottom: '20px',
-                    }
-                }}
-            />
+            {!bookUrl ? (
+                <div className="flex items-center justify-center h-full text-gray-500">
+                    No book selected
+                </div>
+            ) : isLoadingProgress ? (
+                <div className="flex items-center justify-center h-full text-gray-500">
+                    Loading progress...
+                </div>
+            ) : isPdf ? (
+                <PdfReader
+                    ref={pdfReaderRef}
+                    url={bookUrl}
+                    location={location as number}
+                    locationChanged={setLocation}
+                />
+            ) : (
+                <ReactReader
+                    url={bookUrl}
+                    location={location}
+                    locationChanged={handleLocationChanged}
+                    getRendition={getRendition}
+                    swipeable={false} // Disable swipe to fix text selection on mobile
+                    epubOptions={{
+                        // Using default paginated view for better performance and stability
+                        allowScriptedContent: true,
+                    }}
+                    readerStyles={{
+                        ...ReactReaderStyle,
+                        readerArea: {
+                            ...ReactReaderStyle.readerArea,
+                            backgroundColor: '#fafafa',
+                            // Padding handled by container resizing now, but keeping a bit doesn't hurt
+                            // paddingBottom: '20px',
+                        }
+                    }}
+                />
+            )}
 
             {/* Selection Reading Button */}
             {selectedText && !isPlaying && (

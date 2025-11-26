@@ -8,11 +8,11 @@ export async function GET() {
     try {
         const files = await fs.promises.readdir(booksDirectory);
         const books = files
-            .filter(file => file.toLowerCase().endsWith('.epub'))
+            .filter(file => file.toLowerCase().endsWith('.epub') || file.toLowerCase().endsWith('.pdf'))
             .map(file => ({
                 filename: file,
                 path: `/books/${file}`,
-                title: file.replace(/\.epub$/i, '').replace(/-/g, ' ') // Simple title derivation
+                title: file.replace(/\.(epub|pdf)$/i, '').replace(/-/g, ' ') // Simple title derivation
             }));
 
         return NextResponse.json(books);

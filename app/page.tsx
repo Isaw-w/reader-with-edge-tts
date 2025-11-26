@@ -52,6 +52,11 @@ export default function Home() {
               <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-4xl font-serif select-none group-hover:scale-105 transition-transform duration-300">
                 📖
               </div>
+              {/* File Type Badge */}
+              <div className={`absolute top-2 right-2 px-1.5 py-0.5 text-[10px] font-bold rounded text-white shadow-sm ${book.filename.toLowerCase().endsWith('.pdf') ? 'bg-red-500' : 'bg-blue-500'
+                }`}>
+                {book.filename.toLowerCase().endsWith('.pdf') ? 'PDF' : 'EPUB'}
+              </div>
             </div>
             <div className="p-3">
               <h2 className="text-sm font-medium text-gray-900 line-clamp-2 leading-snug group-hover:text-blue-600 transition-colors">

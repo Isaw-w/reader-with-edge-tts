@@ -27,9 +27,13 @@ export async function GET(request: NextRequest) {
         const stats = fs.statSync(filePath);
         console.log(`[API] File read sync success. Size: ${stats.size}`);
 
+        const contentType = safeFilename.toLowerCase().endsWith('.pdf')
+            ? 'application/pdf'
+            : 'application/epub+zip';
+
         return new Response(fileBuffer, {
             headers: {
-                'Content-Type': 'application/epub+zip',
+                'Content-Type': contentType,
                 'Content-Length': stats.size.toString(),
                 'Cache-Control': 'no-store'
             },
