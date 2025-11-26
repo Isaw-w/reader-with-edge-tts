@@ -659,8 +659,8 @@ export default function BookReader() {
                 startY = clientY;
 
                 // Show indicator
-                indicator.style.left = `${clientX} px`;
-                indicator.style.top = `${clientY} px`;
+                indicator.style.left = `${clientX}px`;
+                indicator.style.top = `${clientY}px`;
                 indicator.style.display = 'block';
                 // Force reflow
                 void indicator.offsetWidth;
