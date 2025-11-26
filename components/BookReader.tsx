@@ -33,6 +33,7 @@ export default function BookReader() {
     const currentBodyRef = useRef<HTMLElement | null>(null);
     const ttsAudioUrlRef = useRef<string | null>(null);
     const nextAudioDataRef = useRef<{ url: string, text: string, element: HTMLElement } | null>(null);
+    const prefetchIdRef = useRef<number>(0); // Track current prefetch operation
 
     const availableVoices = [
         { name: 'Xiaoni (Chinese)', value: 'zh-CN-shaanxi-XiaoniNeural' },
@@ -303,13 +304,30 @@ export default function BookReader() {
 
             try {
                 console.log("Prefetching next paragraph:", nextText.substring(0, 20) + "...");
+
+                // Increment and capture the prefetch ID for this operation
+                prefetchIdRef.current += 1;
+                const thisPrefetchId = prefetchIdRef.current;
+
                 const communicate = new BrowserCommunicate(nextText, { voice });
                 const chunks: Uint8Array[] = [];
 
                 for await (const chunk of communicate.stream()) {
+                    // Check if this prefetch is still valid (not superseded by a new one)
+                    if (thisPrefetchId !== prefetchIdRef.current) {
+                        console.log("Prefetch cancelled (superseded)");
+                        return;
+                    }
+
                     if (chunk.type === 'audio' && chunk.data) {
                         chunks.push(chunk.data);
                     }
+                }
+
+                // Final check before storing
+                if (thisPrefetchId !== prefetchIdRef.current) {
+                    console.log("Prefetch cancelled before storage");
+                    return;
                 }
 
                 if (chunks.length > 0) {
