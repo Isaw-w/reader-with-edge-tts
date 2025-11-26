@@ -573,39 +573,39 @@ export default function BookReader() {
             // Ensure text is selectable and styled
             const style = doc.createElement('style');
             style.innerHTML = `
-                    * {
-                    user- select: text!important;
-                -webkit - user - select: text!important;
-                touch - action: manipulation!important;
-            }
+                * {
+                    user-select: text !important;
+                    -webkit-user-select: text !important;
+                    touch-action: manipulation !important;
+                }
                 body {
-                padding: 0 10px!important;
-                margin: 0!important;
-            }
+                    padding: 0 5px !important;
+                    margin: 0 !important;
+                }
                 p {
-                font - size: 1.25rem!important;
-                line - height: 1.8!important;
-                margin - bottom: 1em!important;
-            }
-            div, span, h1, h2, h3, h4, h5, h6 {
-                line - height: 1.8!important;
-            }
-                .long - press - indicator {
-        position: absolute;
-        width: 80px;
-        height: 80px;
-        background - color: rgba(0, 0, 0, 0.15);
-        border - radius: 50 %;
-        transform: translate(-50 %, -50 %) scale(0);
-        pointer - events: none;
-        transition: transform 0.5s ease - out;
-        z - index: 10000;
-        display: none;
-    }
-                .long - press - indicator.active {
-        transform: translate(-50 %, -50 %) scale(1);
-    }
-    `;
+                    font-size: 1.25rem !important;
+                    line-height: 1.8 !important;
+                    margin-bottom: 1em !important;
+                }
+                div, span, h1, h2, h3, h4, h5, h6 {
+                    line-height: 1.8 !important;
+                }
+                .long-press-indicator {
+                    position: absolute;
+                    width: 80px;
+                    height: 80px;
+                    background-color: rgba(0, 0, 0, 0.15);
+                    border-radius: 50%;
+                    transform: translate(-50%, -50%) scale(0);
+                    pointer-events: none;
+                    transition: transform 0.5s ease-out;
+                    z-index: 10000;
+                    display: none;
+                }
+                .long-press-indicator.active {
+                    transform: translate(-50%, -50%) scale(1);
+                }
+            `;
             doc.head.appendChild(style);
 
             // Create indicator element
