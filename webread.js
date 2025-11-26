@@ -1,6 +1,5 @@
 (function () {
 
-
 	// ---- 语音 ----
 	const synth = window.speechSynthesis;
 	let voices = [];
@@ -11,45 +10,45 @@
 	loadVoices();
 	function pickVoice() {
 		return (
-			voices.find((v) => /Xiaoni/i.test(v.name)) ||
+			voices.find((v) => /Xiaoxiao/i.test(v.name)) ||
 			voices.find((v) => /Microsoft/i.test(v.name)) ||
 			null
 		);
 	}
 
 	// ---- 朗读浮窗 ----
-		const CONTENT_MAX_HEIGHT = '50vh';
-		const RATE_RANGE = { min: 0.6, max: 3.0, step: 0.1 };
-		const RATE_STORAGE_KEY = 'mlacls_speech_rate';
-		const DEFAULT_SPEECH_RATE = 1.1;
-		let panel = null,
-			textBox = null,
-			toggleBtn = null,
-			contentShell = null,
-			scrollArea = null,
-			stopBtn = null,
-			titleLabel = null,
-			bar = null,
-			isCollapsed = false,
-			rateInput = null,
-			rateValue = null,
-			rateRow = null,
-			speechRate = DEFAULT_SPEECH_RATE;
+	const CONTENT_MAX_HEIGHT = '50vh';
+	const RATE_RANGE = { min: 0.6, max: 3.0, step: 0.1 };
+	const RATE_STORAGE_KEY = 'mlacls_speech_rate';
+	const DEFAULT_SPEECH_RATE = 1.1;
+	let panel = null,
+		textBox = null,
+		toggleBtn = null,
+		contentShell = null,
+		scrollArea = null,
+		stopBtn = null,
+		titleLabel = null,
+		bar = null,
+		isCollapsed = false,
+		rateInput = null,
+		rateValue = null,
+		rateRow = null,
+		speechRate = DEFAULT_SPEECH_RATE;
 
-		try {
-			const storedRate = localStorage.getItem(RATE_STORAGE_KEY);
-			if (storedRate) {
-				const parsed = parseFloat(storedRate);
-				if (!Number.isNaN(parsed)) {
-					speechRate = Math.min(
-						RATE_RANGE.max,
-						Math.max(RATE_RANGE.min, parsed),
-					);
-				}
+	try {
+		const storedRate = localStorage.getItem(RATE_STORAGE_KEY);
+		if (storedRate) {
+			const parsed = parseFloat(storedRate);
+			if (!Number.isNaN(parsed)) {
+				speechRate = Math.min(
+					RATE_RANGE.max,
+					Math.max(RATE_RANGE.min, parsed),
+				);
 			}
-		} catch (err) {
-			// 忽略本地存储的读取错误
 		}
+	} catch (err) {
+		// 忽略本地存储的读取错误
+	}
 	function ensurePanel() {
 		if (panel) return;
 		panel = document.createElement('div');
@@ -80,7 +79,7 @@
 		bar.style.alignItems = 'center';
 		stopBtn = document.createElement('button');
 		stopBtn.textContent = '■';
-		Object.assign(stopBtn.style, { cursor: 'pointer', padding: '2px 8px', background: 'rgba(255,226,150,0.9)'});
+		Object.assign(stopBtn.style, { cursor: 'pointer', padding: '2px 8px', background: 'rgba(255,226,150,0.9)' });
 		stopBtn.onclick = () => {
 			synth.cancel();
 		};
@@ -365,11 +364,11 @@
 	let currentTokens = [];
 	let currentSpans = [];
 	let currentStartToken = 0;
-		function renderTokens(tokens) {
-			ensurePanel();
-			if (isCollapsed) expandPanel();
-			if (textBox.replaceChildren) textBox.replaceChildren();
-			else while (textBox.firstChild) textBox.removeChild(textBox.firstChild);
+	function renderTokens(tokens) {
+		ensurePanel();
+		if (isCollapsed) expandPanel();
+		if (textBox.replaceChildren) textBox.replaceChildren();
+		else while (textBox.firstChild) textBox.removeChild(textBox.firstChild);
 		// 渲染 span
 		const spans = tokens.map((t, idx) => {
 			const s = document.createElement('span');
@@ -473,22 +472,15 @@
 	}
 
 	// ---- 浮动按钮 ----
-const BTN_MARGIN = 14;
-const BTN_GAP = 12;
-const DEFAULT_BTN_RIGHT = '20px';
-const DEFAULT_BTN_BOTTOM = '20px';
-const DEFAULT_POSITION = 'fixed';
-
 	const btn = document.createElement('button');
-btn.textContent = '🔊 Read';
-btn.tabIndex = -1;
-Object.assign(btn.style, {
-	position: DEFAULT_POSITION,
-	right: DEFAULT_BTN_RIGHT,
-	bottom: DEFAULT_BTN_BOTTOM,
-	zIndex: 99999,
-	padding: '10px 14px',
-	fontSize: '15px',
+	btn.textContent = '🔊 Read';
+	Object.assign(btn.style, {
+		position: 'fixed',
+		right: '20px',
+		bottom: '20px',
+		zIndex: 99999,
+		padding: '10px 14px',
+		fontSize: '15px',
 		fontWeight: 500,
 		color: '#fff',
 		background: 'linear-gradient(135deg,#4a90e2,#357ae8)',
@@ -498,11 +490,6 @@ Object.assign(btn.style, {
 		cursor: 'pointer',
 		transition: 'transform .15s, box-shadow .15s',
 	});
-	// 避免点击按钮时抢走选区焦点
-	const suppressFocus = (e) => e.preventDefault();
-	btn.addEventListener('mousedown', suppressFocus);
-	btn.addEventListener('mouseup', suppressFocus);
-	btn.addEventListener('pointerdown', suppressFocus);
 	btn.onmouseenter = () => {
 		btn.style.transform = 'translateY(-2px)';
 		btn.style.boxShadow = '0 6px 14px rgba(0,0,0,0.2)';
@@ -516,80 +503,6 @@ Object.assign(btn.style, {
 		if (sel) speak(sel);
 		else alert('先选择文本');
 	};
-
-function resetBtnPosition() {
-	btn.style.position = DEFAULT_POSITION;
-	btn.style.left = '';
-	btn.style.top = '';
-	btn.style.right = DEFAULT_BTN_RIGHT;
-	btn.style.bottom = DEFAULT_BTN_BOTTOM;
-}
-
-let lastSelectionRect = null;
-function positionBtnNearRect(rect, sourceWindow = window) {
-	if (!rect) {
-		resetBtnPosition();
-		return;
-	}
-	const normRect = normalizeRectToTopWindow(rect, sourceWindow);
-	const scrollX =
-		window.pageXOffset ||
-		(document.documentElement && document.documentElement.scrollLeft) ||
-		0;
-	const scrollY =
-		window.pageYOffset ||
-		(document.documentElement && document.documentElement.scrollTop) ||
-		0;
-	const vw = (window.innerWidth || 0) + scrollX;
-	const vh = (window.innerHeight || 0) + scrollY;
-	const btnWidth = btn.offsetWidth || 120;
-	const btnHeight = btn.offsetHeight || 44;
-
-	let left = normRect.right + BTN_GAP + scrollX;
-	let top = normRect.bottom + BTN_GAP + scrollY;
-
-	// 如果右侧放不下，就放到选区左侧
-	if (left + btnWidth + BTN_MARGIN > vw) {
-		left = Math.max(BTN_MARGIN + scrollX, normRect.left + scrollX - btnWidth - BTN_GAP);
-	}
-	// 如果下方放不下，就放到选区上方
-	if (top + btnHeight + BTN_MARGIN > vh) {
-		top = Math.max(BTN_MARGIN + scrollY, normRect.top + scrollY - btnHeight - BTN_GAP);
-	}
-
-	left = Math.min(
-		Math.max(left, BTN_MARGIN + scrollX),
-		Math.max(BTN_MARGIN + scrollX, vw - btnWidth - BTN_MARGIN),
-	);
-	top = Math.min(
-		Math.max(top, BTN_MARGIN + scrollY),
-		Math.max(BTN_MARGIN + scrollY, vh - btnHeight - BTN_MARGIN),
-	);
-
-	if (!Number.isFinite(left) || !Number.isFinite(top)) {
-		resetBtnPosition();
-		return;
-	}
-
-	btn.style.position = 'absolute';
-	btn.style.right = '';
-	btn.style.bottom = '';
-	btn.style.left = `${left}px`;
-	btn.style.top = `${top}px`;
-}
-
-function updateFloatingBtnPosition(win = window) {
-	if (!win || !btn) return;
-	const rect = getSelectionRect(win);
-	if (rect) {
-		lastSelectionRect = rect;
-		positionBtnNearRect(rect, win);
-	} else if (lastSelectionRect) {
-		positionBtnNearRect(lastSelectionRect, win);
-	} else {
-		resetBtnPosition();
-	}
-}
 	document.body.appendChild(btn);
 
 	function safeGetSelectionFromWindow(targetWindow) {
@@ -601,20 +514,11 @@ function updateFloatingBtnPosition(win = window) {
 		}
 	}
 
-	let lastSelectionText = '';
-	function cacheSelection(win) {
-		const s = safeGetSelectionFromWindow(win);
-		if (s) lastSelectionText = s;
-	}
-
 	function collectSelectionFromWindows(targetWindow, visited = new Set()) {
 		if (!targetWindow || visited.has(targetWindow)) return '';
 		visited.add(targetWindow);
 		const direct = safeGetSelectionFromWindow(targetWindow);
-		if (direct) {
-			lastSelectionText = direct;
-			return direct;
-		}
+		if (direct) return direct;
 
 		let frameCount = 0;
 		try {
@@ -664,66 +568,11 @@ function updateFloatingBtnPosition(win = window) {
 	}
 
 	function getActiveSelectionText() {
-		const live = collectSelectionFromWindows(window);
-		if (live) return live;
-		return lastSelectionText;
+		return collectSelectionFromWindows(window);
 	}
 
 	function getTrimmedSelection(targetWindow = window) {
 		return safeGetSelectionFromWindow(targetWindow);
-	}
-
-	function getSelectionRect(targetWindow = window) {
-		if (!targetWindow || !targetWindow.getSelection) return null;
-		try {
-			const doc = targetWindow.document;
-			const sel = targetWindow.getSelection();
-			if (!sel || sel.isCollapsed || sel.rangeCount === 0) return null;
-			const range = sel.getRangeAt(0);
-			let rect = range.getBoundingClientRect();
-			if ((!rect || !rect.width) && range.getClientRects) {
-				const first = range.getClientRects()[0];
-				if (first) rect = first;
-			}
-			// 文本框/输入框内的选区可能返回 0 尺寸，退化为控件的矩形
-			if ((!rect || (!rect.width && !rect.height)) && doc && doc.activeElement) {
-				const el = doc.activeElement;
-				if (el.getBoundingClientRect) {
-					const box = el.getBoundingClientRect();
-					if (box && (box.width || box.height)) rect = box;
-				}
-			}
-			if (!rect || (!rect.width && !rect.height)) return null;
-			return rect;
-		} catch (err) {
-			return null;
-		}
-	}
-
-	function normalizeRectToTopWindow(rect, sourceWindow = window) {
-		if (!rect) return rect;
-		let r = rect;
-		let win = sourceWindow;
-		while (win && win !== window) {
-			const frameEl = win.frameElement;
-			if (!frameEl || !frameEl.getBoundingClientRect) break;
-			const frameRect = frameEl.getBoundingClientRect();
-			r = {
-				left: r.left + frameRect.left,
-				right: r.right + frameRect.left,
-				top: r.top + frameRect.top,
-				bottom: r.bottom + frameRect.top,
-				width: r.width,
-				height: r.height,
-			};
-			const parentWin =
-				frameEl.ownerDocument && frameEl.ownerDocument.defaultView
-					? frameEl.ownerDocument.defaultView
-					: null;
-			if (!parentWin || parentWin === win) break;
-			win = parentWin;
-		}
-		return r;
 	}
 
 	function extractFallbackText(target) {
@@ -892,34 +741,6 @@ function updateFloatingBtnPosition(win = window) {
 		registeredDocs.add(doc);
 		doc.addEventListener('dblclick', handleDblClick);
 		doc.addEventListener('click', handleClick);
-		let updateTimer = null;
-		const scheduleUpdate = () => {
-			if (updateTimer) cancelAnimationFrame(updateTimer);
-			updateTimer = requestAnimationFrame(() => {
-				updateTimer = null;
-				const ctxWin = doc.defaultView || window;
-				updateFloatingBtnPosition(ctxWin);
-				// 轻微延迟再跑一次，确保拖拽/键盘选区稳定后位置正确
-				setTimeout(() => updateFloatingBtnPosition(ctxWin), 80);
-			});
-		};
-		doc.addEventListener('selectionchange', () => {
-			try {
-				cacheSelection(doc.defaultView || window);
-				scheduleUpdate();
-			} catch (err) {
-				/* 忽略 selectionchange 读取错误 */
-			}
-		});
-		// 鼠标松开或键盘调整光标后再更新位置，确保选区已定型
-		const update = () => scheduleUpdate();
-		doc.addEventListener('mouseup', update);
-		doc.addEventListener('pointerup', update);
-		doc.addEventListener('keyup', update);
-	if (doc.defaultView && doc.defaultView.addEventListener) {
-		doc.defaultView.addEventListener('scroll', update, { passive: true });
-		doc.defaultView.addEventListener('resize', update, { passive: true });
-	}
 		watchFramesInRoot(doc);
 	}
 

@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
-upte
-## Getting Started
+# Booker Reader
 
-First, run the development server:
+A modern, web-based EPUB reader featuring high-quality Text-to-Speech (Edge TTS), persistent audio controls, and a mobile-friendly design.
 
-```bash
-npm run dev
-# or
-yarn dev111
-# or
-pnpm dev
-# or
-bun dev
-```
+## Features
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **High-Quality TTS**: Uses Microsoft Edge's neural voices for natural-sounding speech.
+- **Smart Navigation**:
+    - **Auto Page Turn**: Automatically flips pages as you read.
+    - **Paragraph Highlighting**: Highlights the exact paragraph being read.
+    - **Resume Reading**: Remembers your exact position (paragraph-level) and resumes from there.
+- **Mini Player**: A persistent audio panel that stays out of your way while keeping controls accessible.
+- **Mobile Optimized**: Designed for touch interactions, with swipe disabled to prevent conflicts with text selection.
+- **Customizable**: Adjustable font size, playback speed, and voice selection.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## User Guide
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Adding Books
+1.  Place your `.epub` files in the `public/books` directory.
+2.  The app will automatically list them on the home page.
 
-## Learn More
+### Reading
+- **Start Reading**: Click a book cover to open it.
+- **Play/Pause**: Use the floating control panel at the bottom.
+- **Read Selection**: Select any text and click the "Read Selection" button that appears.
+- **Change Voice/Speed**: Expand the bottom panel to adjust settings. These are saved automatically.
 
-To learn more about Next.js, take a look at the following resources:
+## Deployment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+You can easily deploy this reader to Vercel for free.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1.  **Fork the Repository**: Click "Fork" on GitHub to create your own copy.
+2.  **Deploy to Vercel**:
+    - Go to [Vercel](https://vercel.com) and sign up/login.
+    - Click "Add New..." -> "Project".
+    - Import your forked repository.
+    - Click "Deploy".
+3.  **Done!** Your reader is now live.
 
-## Deploy on Vercel
+## Developer Guide
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Project Structure
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **`components/BookReader.tsx`**: The core component. Handles the EPUB rendering (`react-reader`), TTS integration, UI state, and audio playback.
+- **`utils/edge-tts-universal/`**: A custom implementation of the Edge TTS client. It uses standard browser APIs (WebSocket, Web Crypto) to communicate directly with the TTS service without needing a backend proxy.
+- **`app/api/book-content/route.ts`**: An API route that serves the EPUB files from the `public/books` directory to the frontend.
+- **`app/page.tsx`**: The library home page. Fetches the list of books and displays them as a grid.
+
+### Key Technologies
+
+- **Next.js**: Framework for the web application.
+- **React Reader**: Wrapper around `epub.js` for rendering books.
+- **Edge TTS**: Microsoft's text-to-speech service (reverse-engineered client).
+- **Tailwind CSS**: For styling.
+
+### Customization
+
+- **Styling**: Modify `components/BookReader.tsx` to change the look and feel. The `readerStyles` prop controls the inner iframe styling.
+- **Voices**: The list of available voices is defined in `availableVoices` within `BookReader.tsx`. You can add more Edge TTS voices there.
