@@ -843,13 +843,13 @@ export default function BookReader() {
                     className="absolute -top-6 left-0 right-0 h-6 flex justify-center cursor-pointer group"
                     onClick={() => setShowPanel(!showPanel)}
                 >
-                    <div className={`w - 12 h - 1.5 bg - gray - 300 rounded - full mt - 2 transition - colors group - hover: bg - gray - 400 ${showPanel ? '' : 'bg-gray-400'} `} />
+                    <div className={`w-12 h-1.5 bg-gray-300 rounded-full mt-2 transition-colors group-hover:bg-gray-400 ${showPanel ? '' : 'bg-gray-400'}`} />
                 </div>
 
                 <div className="max-w-screen-md mx-auto px-4 py-2 flex flex-col gap-2">
                     {/* Collapsible Content (Voice & Speed) */}
                     <div
-                        className={`flex flex - col gap - 2 overflow - hidden transition - all duration - 300 ease -in -out ${showPanel ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'} `}
+                        className={`flex flex-col gap-2 overflow-hidden transition-all duration-300 ease-in-out ${showPanel ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}
                     >
                         {/* Voice Selection */}
                         <div className="flex items-center justify-between gap-2">
