@@ -107,6 +107,9 @@ export default function BookReader() {
     useEffect(() => {
         localStorage.setItem('tts-voice', voice);
 
+        // Cancel any in-flight prefetch by incrementing the ID
+        prefetchIdRef.current += 1;
+
         // Clear prefetched audio when voice changes so next paragraph uses new voice
         if (nextAudioDataRef.current) {
             URL.revokeObjectURL(nextAudioDataRef.current.url);
