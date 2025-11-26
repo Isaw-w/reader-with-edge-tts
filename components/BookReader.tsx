@@ -840,6 +840,8 @@ export default function BookReader() {
                             backgroundColor: '#fafafa',
                             // Padding handled by container resizing now, but keeping a bit doesn't hurt
                             // paddingBottom: '20px',
+                        }
+                    }}
                 />
             )}
 
