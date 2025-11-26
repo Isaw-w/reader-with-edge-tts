@@ -833,229 +833,226 @@ export default function BookReader() {
                     </select>
                 )}
             </div>
-            <span>←</span>
-            <span className="font-medium">Library</span>
-        </a>
-            </div >
 
-        {!bookUrl ? (
-            <div className="flex items-center justify-center h-full text-gray-500">
-                No book selected
-            </div>
-        ) : isLoadingProgress ? (
-            <div className="flex items-center justify-center h-full text-gray-500">
-                Loading progress...
-            </div>
-        ) : isPdf ? (
-            <PdfReader
-                ref={pdfReaderRef}
-                url={bookUrl}
-                location={location as number}
-                locationChanged={setLocation}
-            />
-        ) : (
-            <ReactReader
-                url={bookUrl}
-                location={location}
-                locationChanged={handleLocationChanged}
-                getRendition={getRendition}
-                swipeable={false} // Disable swipe to fix text selection on mobile
-                showToc={true} // Enable table of contents and navigation
-                epubOptions={{
-                    // Using default paginated view for better performance and stability
-                    allowScriptedContent: true,
-                }}
-                readerStyles={{
-                    ...ReactReaderStyle,
-                    readerArea: {
-                        ...ReactReaderStyle.readerArea,
-                        backgroundColor: '#fafafa',
-                        // Padding handled by container resizing now, but keeping a bit doesn't hurt
-                        // paddingBottom: '20px',
-                    }
-                }}
-            />
-        )
-}
 
-{/* Explicit Navigation Buttons for EPUB */ }
-{
-    !isPdf && bookUrl && (
-        <>
-            <button
-                className="fixed left-2 top-1/2 transform -translate-y-1/2 z-40 p-3 bg-white/80 hover:bg-white shadow-lg rounded-full text-gray-600 hover:text-gray-900 transition-all active:scale-95"
-                onClick={() => {
-                    if (renditionRef.current) {
-                        try {
-                            renditionRef.current.prev();
-                        } catch (err) {
-                            console.error("Navigation error (prev):", err);
+            {!bookUrl ? (
+                <div className="flex items-center justify-center h-full text-gray-500">
+                    No book selected
+                </div>
+            ) : isLoadingProgress ? (
+                <div className="flex items-center justify-center h-full text-gray-500">
+                    Loading progress...
+                </div>
+            ) : isPdf ? (
+                <PdfReader
+                    ref={pdfReaderRef}
+                    url={bookUrl}
+                    location={location as number}
+                    locationChanged={setLocation}
+                />
+            ) : (
+                <ReactReader
+                    url={bookUrl}
+                    location={location}
+                    locationChanged={handleLocationChanged}
+                    getRendition={getRendition}
+                    swipeable={false} // Disable swipe to fix text selection on mobile
+                    showToc={true} // Enable table of contents and navigation
+                    epubOptions={{
+                        // Using default paginated view for better performance and stability
+                        allowScriptedContent: true,
+                    }}
+                    readerStyles={{
+                        ...ReactReaderStyle,
+                        readerArea: {
+                            ...ReactReaderStyle.readerArea,
+                            backgroundColor: '#fafafa',
+                            // Padding handled by container resizing now, but keeping a bit doesn't hurt
+                            // paddingBottom: '20px',
                         }
-                    }
-                }}
-                title="Previous Page"
-            >
-                <span className="text-2xl">‹</span>
-            </button>
-            <button
-                className="fixed right-2 top-1/2 transform -translate-y-1/2 z-40 p-3 bg-white/80 hover:bg-white shadow-lg rounded-full text-gray-600 hover:text-gray-900 transition-all active:scale-95"
-                onClick={() => {
-                    if (renditionRef.current) {
-                        try {
-                            renditionRef.current.next();
-                        } catch (err) {
-                            console.error("Navigation error (next):", err);
-                        }
-                    }
-                }}
-                title="Next Page"
-            >
-                <span className="text-2xl">›</span>
-            </button>
-        </>
-    )
-}
+                    }}
+                />
+            )
+            }
 
-{/* Selection Reading Button */ }
-{
-    selectedText && !isPlaying && (
-        <div className="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-50">
-            <button
-                onClick={() => {
-                    console.log("Read Selection clicked:", selectedText);
-                    if (selectedText) startReading(selectedText);
+            {/* Explicit Navigation Buttons for EPUB */}
+            {
+                !isPdf && bookUrl && (
+                    <>
+                        <button
+                            className="fixed left-2 top-1/2 transform -translate-y-1/2 z-40 p-3 bg-white/80 hover:bg-white shadow-lg rounded-full text-gray-600 hover:text-gray-900 transition-all active:scale-95"
+                            onClick={() => {
+                                if (renditionRef.current) {
+                                    try {
+                                        renditionRef.current.prev();
+                                    } catch (err) {
+                                        console.error("Navigation error (prev):", err);
+                                    }
+                                }
+                            }}
+                            title="Previous Page"
+                        >
+                            <span className="text-2xl">‹</span>
+                        </button>
+                        <button
+                            className="fixed right-2 top-1/2 transform -translate-y-1/2 z-40 p-3 bg-white/80 hover:bg-white shadow-lg rounded-full text-gray-600 hover:text-gray-900 transition-all active:scale-95"
+                            onClick={() => {
+                                if (renditionRef.current) {
+                                    try {
+                                        renditionRef.current.next();
+                                    } catch (err) {
+                                        console.error("Navigation error (next):", err);
+                                    }
+                                }
+                            }}
+                            title="Next Page"
+                        >
+                            <span className="text-2xl">›</span>
+                        </button>
+                    </>
+                )
+            }
+
+            {/* Selection Reading Button */}
+            {
+                selectedText && !isPlaying && (
+                    <div className="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-50">
+                        <button
+                            onClick={() => {
+                                console.log("Read Selection clicked:", selectedText);
+                                if (selectedText) startReading(selectedText);
+                            }}
+                            className="flex items-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-full shadow-xl hover:bg-black transition-all active:scale-95"
+                        >
+                            <span>🔊</span>
+                            <span className="font-medium">Read Selection</span>
+                        </button>
+                    </div>
+                )
+            }
+
+            {/* TTS Panel */}
+            <div
+                className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] transition-all duration-300 ease-in-out flex flex-col justify-center"
+                style={{
+                    paddingBottom: 'env(safe-area-inset-bottom)',
+                    height: showPanel ? 'auto' : '7vh'
                 }}
-                className="flex items-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-full shadow-xl hover:bg-black transition-all active:scale-95"
             >
-                <span>🔊</span>
-                <span className="font-medium">Read Selection</span>
-            </button>
-        </div>
-    )
-}
-
-{/* TTS Panel */ }
-<div
-    className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] transition-all duration-300 ease-in-out flex flex-col justify-center"
-    style={{
-        paddingBottom: 'env(safe-area-inset-bottom)',
-        height: showPanel ? 'auto' : '7vh'
-    }}
->
-    {/* Toggle Handle */}
-    <div
-        className="absolute -top-6 left-0 right-0 h-6 flex justify-center cursor-pointer group"
-        onClick={() => setShowPanel(!showPanel)}
-    >
-        <div className={`w-12 h-1.5 bg-gray-300 rounded-full mt-2 transition-colors group-hover:bg-gray-400 ${showPanel ? '' : 'bg-gray-400'}`} />
-    </div>
-
-    <div className="max-w-screen-md mx-auto px-4 py-2 flex flex-col gap-2">
-        {/* Collapsible Content (Voice & Speed) */}
-        <div
-            className={`flex flex-col gap-2 overflow-hidden transition-all duration-300 ease-in-out ${showPanel ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}
-        >
-            {/* Voice Selection */}
-            <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Voice</span>
-                <select
-                    value={voice}
-                    onChange={(e) => setVoice(e.target.value)}
-                    className="flex-1 bg-gray-100 border-none rounded-lg px-3 py-1.5 text-sm font-medium text-gray-900 focus:ring-2 focus:ring-blue-500"
+                {/* Toggle Handle */}
+                <div
+                    className="absolute -top-6 left-0 right-0 h-6 flex justify-center cursor-pointer group"
+                    onClick={() => setShowPanel(!showPanel)}
                 >
-                    {availableVoices.map((v) => (
-                        <option key={v.value} value={v.value}>
-                            {v.name}
-                        </option>
-                    ))}
-                </select>
-                <button
-                    onClick={() => setShowPanel(false)}
-                    className="p-1.5 text-gray-400 hover:text-gray-600"
-                >
-                    <span className="text-xl">⌄</span>
-                </button>
-            </div>
+                    <div className={`w-12 h-1.5 bg-gray-300 rounded-full mt-2 transition-colors group-hover:bg-gray-400 ${showPanel ? '' : 'bg-gray-400'}`} />
+                </div>
 
-            {/* Speed Control */}
-            <div className="flex flex-col gap-1">
-                <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-400">Speed</span>
-                <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-gray-500 w-8 text-right">0.5x</span>
-                    <input
-                        type="range"
-                        min="0.5"
-                        max="3"
-                        step="0.1"
-                        value={rate}
-                        onChange={(e) => handleRateChange(parseFloat(e.target.value))}
-                        className="w-full h-1.5 bg-gray-200 rounded-full appearance-none cursor-pointer accent-blue-500 hover:accent-blue-600 transition-all"
-                    />
-                    <span className="text-xs font-bold text-gray-900 w-8 tabular-nums">{rate.toFixed(1)}x</span>
+                <div className="max-w-screen-md mx-auto px-4 py-2 flex flex-col gap-2">
+                    {/* Collapsible Content (Voice & Speed) */}
+                    <div
+                        className={`flex flex-col gap-2 overflow-hidden transition-all duration-300 ease-in-out ${showPanel ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}
+                    >
+                        {/* Voice Selection */}
+                        <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Voice</span>
+                            <select
+                                value={voice}
+                                onChange={(e) => setVoice(e.target.value)}
+                                className="flex-1 bg-gray-100 border-none rounded-lg px-3 py-1.5 text-sm font-medium text-gray-900 focus:ring-2 focus:ring-blue-500"
+                            >
+                                {availableVoices.map((v) => (
+                                    <option key={v.value} value={v.value}>
+                                        {v.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <button
+                                onClick={() => setShowPanel(false)}
+                                className="p-1.5 text-gray-400 hover:text-gray-600"
+                            >
+                                <span className="text-xl">⌄</span>
+                            </button>
+                        </div>
+
+                        {/* Speed Control */}
+                        <div className="flex flex-col gap-1">
+                            <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-400">Speed</span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-medium text-gray-500 w-8 text-right">0.5x</span>
+                                <input
+                                    type="range"
+                                    min="0.5"
+                                    max="3"
+                                    step="0.1"
+                                    value={rate}
+                                    onChange={(e) => handleRateChange(parseFloat(e.target.value))}
+                                    className="w-full h-1.5 bg-gray-200 rounded-full appearance-none cursor-pointer accent-blue-500 hover:accent-blue-600 transition-all"
+                                />
+                                <span className="text-xs font-bold text-gray-900 w-8 tabular-nums">{rate.toFixed(1)}x</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Persistent Controls */}
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                            {/* Expand Button when minimized */}
+                            {!showPanel && (
+                                <button
+                                    onClick={() => setShowPanel(true)}
+                                    className="p-2 text-gray-500 hover:text-gray-700 active:scale-95 transition-transform"
+                                    title="Expand Panel"
+                                >
+                                    <span className="text-xl">⌃</span>
+                                </button>
+                            )}
+                            {/* Show current voice name when minimized */}
+                            {!showPanel && (
+                                <span className="text-xs font-medium text-gray-500 truncate max-w-[100px]">
+                                    {availableVoices.find(v => v.value === voice)?.name.split(' ')[0]}
+                                </span>
+                            )}
+                        </div>
+
+                        <div className="flex items-center gap-2 ml-auto">
+                            <button
+                                onClick={readPrevious}
+                                className="flex items-center justify-center w-9 h-9 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-full transition-colors active:scale-95"
+                                title="Previous Paragraph"
+                            >
+                                <span className="text-lg">⏮</span>
+                            </button>
+
+                            <button
+                                onClick={togglePause}
+                                className="flex items-center justify-center w-11 h-11 bg-gray-900 hover:bg-black active:bg-gray-800 text-white rounded-full shadow-lg transition-all transform active:scale-95"
+                            >
+                                {isPlaying && !isPaused ? (
+                                    <span className="text-lg">⏸</span>
+                                ) : (
+                                    <span className="text-lg ml-0.5">▶</span>
+                                )}
+                            </button>
+
+                            <button
+                                onClick={readNext}
+                                className="flex items-center justify-center w-9 h-9 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-full transition-colors active:scale-95"
+                                title="Next Paragraph"
+                            >
+                                <span className="text-lg">⏭</span>
+                            </button>
+
+                            <button
+                                onClick={stopReading}
+                                className="flex items-center justify-center w-9 h-9 bg-red-50 hover:bg-red-100 text-red-500 rounded-full transition-colors active:scale-95 ml-1"
+                                title="Stop"
+                            >
+                                <span className="text-lg">✕</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-
-        {/* Persistent Controls */}
-        <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-                {/* Expand Button when minimized */}
-                {!showPanel && (
-                    <button
-                        onClick={() => setShowPanel(true)}
-                        className="p-2 text-gray-500 hover:text-gray-700 active:scale-95 transition-transform"
-                        title="Expand Panel"
-                    >
-                        <span className="text-xl">⌃</span>
-                    </button>
-                )}
-                {/* Show current voice name when minimized */}
-                {!showPanel && (
-                    <span className="text-xs font-medium text-gray-500 truncate max-w-[100px]">
-                        {availableVoices.find(v => v.value === voice)?.name.split(' ')[0]}
-                    </span>
-                )}
-            </div>
-
-            <div className="flex items-center gap-2 ml-auto">
-                <button
-                    onClick={readPrevious}
-                    className="flex items-center justify-center w-9 h-9 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-full transition-colors active:scale-95"
-                    title="Previous Paragraph"
-                >
-                    <span className="text-lg">⏮</span>
-                </button>
-
-                <button
-                    onClick={togglePause}
-                    className="flex items-center justify-center w-11 h-11 bg-gray-900 hover:bg-black active:bg-gray-800 text-white rounded-full shadow-lg transition-all transform active:scale-95"
-                >
-                    {isPlaying && !isPaused ? (
-                        <span className="text-lg">⏸</span>
-                    ) : (
-                        <span className="text-lg ml-0.5">▶</span>
-                    )}
-                </button>
-
-                <button
-                    onClick={readNext}
-                    className="flex items-center justify-center w-9 h-9 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-full transition-colors active:scale-95"
-                    title="Next Paragraph"
-                >
-                    <span className="text-lg">⏭</span>
-                </button>
-
-                <button
-                    onClick={stopReading}
-                    className="flex items-center justify-center w-9 h-9 bg-red-50 hover:bg-red-100 text-red-500 rounded-full transition-colors active:scale-95 ml-1"
-                    title="Stop"
-                >
-                    <span className="text-lg">✕</span>
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
         </div >
     );
 }
