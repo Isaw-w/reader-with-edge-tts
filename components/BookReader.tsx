@@ -840,9 +840,43 @@ export default function BookReader() {
                             backgroundColor: '#fafafa',
                             // Padding handled by container resizing now, but keeping a bit doesn't hurt
                             // paddingBottom: '20px',
-                        }
-                    }}
                 />
+            )}
+
+            {/* Explicit Navigation Buttons for EPUB */}
+            {!isPdf && bookUrl && (
+                <>
+                    <button
+                        className="fixed left-2 top-1/2 transform -translate-y-1/2 z-40 p-3 bg-white/80 hover:bg-white shadow-lg rounded-full text-gray-600 hover:text-gray-900 transition-all active:scale-95"
+                        onClick={() => {
+                            if (renditionRef.current) {
+                                try {
+                                    renditionRef.current.prev();
+                                } catch (err) {
+                                    console.error("Navigation error (prev):", err);
+                                }
+                            }
+                        }}
+                        title="Previous Page"
+                    >
+                        <span className="text-2xl">‹</span>
+                    </button>
+                    <button
+                        className="fixed right-2 top-1/2 transform -translate-y-1/2 z-40 p-3 bg-white/80 hover:bg-white shadow-lg rounded-full text-gray-600 hover:text-gray-900 transition-all active:scale-95"
+                        onClick={() => {
+                            if (renditionRef.current) {
+                                try {
+                                    renditionRef.current.next();
+                                } catch (err) {
+                                    console.error("Navigation error (next):", err);
+                                }
+                            }
+                        }}
+                        title="Next Page"
+                    >
+                        <span className="text-2xl">›</span>
+                    </button>
+                </>
             )}
 
             {/* Selection Reading Button */}
