@@ -2,27 +2,27 @@ async function test() {
     try {
         // Try to import the browser build directly
         const module = await import('./node_modules/edge-tts-universal/dist/browser.js');
-        console.log("Browser Module exports:", Object.keys(module));
+        console.log("Browser Module loaded");
 
         const { EdgeTTS } = module;
-        console.log("EdgeTTS class:", EdgeTTS);
 
         if (EdgeTTS) {
-            // Try calling synthesize with positional args
+            const text = "高一生遺書（台灣人權博物館提供）";
+            const voice = "zh-CN-shaanxi-XiaoniNeural";
+            console.log(`Testing TTS with text: "${text}" and voice: ${voice}`);
+
             try {
-                const tts = new EdgeTTS("Hello world", "en-US-EmmaMultilingualNeural");
-                console.log("Calling synthesize...");
+                const tts = new EdgeTTS(text, voice);
                 const result = await tts.synthesize();
-                console.log("Synthesize result type:", typeof result);
-                if (result) {
-                    console.log("Synthesize result keys:", Object.keys(result));
-                    if (result.audio) {
-                        console.log("Audio type:", typeof result.audio);
-                        // console.log("Audio is blob?", result.audio instanceof Blob);
-                    }
+                console.log("Synthesize result:", result);
+
+                if (result && result.audio) {
+                    console.log("Audio generated successfully, length:", result.audio.byteLength);
+                } else {
+                    console.error("No audio generated");
                 }
             } catch (e) {
-                console.log("Synthesize failed:", e);
+                console.error("Synthesize failed:", e);
             }
         }
 

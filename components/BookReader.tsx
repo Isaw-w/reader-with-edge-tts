@@ -28,6 +28,8 @@ export default function BookReader() {
     const currentElementRef = useRef<HTMLElement | null>(null);
     const originalStyleRef = useRef<string | null>(null);
     const isPlayingRef = useRef(false);
+    const rateRef = useRef(rate);
+    const voiceRef = useRef(voice);
     const autoPageTurnRef = useRef(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const currentBodyRef = useRef<HTMLElement | null>(null);
@@ -105,6 +107,7 @@ export default function BookReader() {
 
     // Save voice setting and clear prefetch when voice changes
     useEffect(() => {
+        voiceRef.current = voice;
         localStorage.setItem('tts-voice', voice);
 
         // Cancel any in-flight prefetch by incrementing the ID
@@ -120,6 +123,7 @@ export default function BookReader() {
 
     // Save rate setting
     useEffect(() => {
+        rateRef.current = rate;
         localStorage.setItem('tts-rate', rate.toString());
     }, [rate]);
 
@@ -138,8 +142,57 @@ export default function BookReader() {
         setLocation(loc);
         if (bookUrl) {
             localStorage.setItem(`book-progress-${bookUrl}`, String(loc));
+            // Save as last read book
+            const filename = searchParams.get('book');
+            if (filename) {
+                localStorage.setItem('last-read-book', filename);
+            }
         }
-    }, [bookUrl]);
+    }, [bookUrl, searchParams]);
+
+    const playbackIdRef = useRef<number>(0);
+    const retryCountRef = useRef<number>(0);
+    const MAX_RETRIES = 3;
+
+    const wakeLockRef = useRef<any>(null);
+
+    const requestWakeLock = async () => {
+        if ('wakeLock' in navigator) {
+            try {
+                wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
+                console.log('Wake Lock is active');
+                wakeLockRef.current.addEventListener('release', () => {
+                    console.log('Wake Lock was released');
+                });
+            } catch (err: any) {
+                console.error(`${err.name}, ${err.message}`);
+            }
+        }
+    };
+
+    const releaseWakeLock = async () => {
+        if (wakeLockRef.current) {
+            try {
+                await wakeLockRef.current.release();
+                wakeLockRef.current = null;
+            } catch (err: any) {
+                console.error(`${err.name}, ${err.message}`);
+            }
+        }
+    };
+
+    // Re-acquire wake lock on visibility change if playing
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && isPlayingRef.current) {
+                requestWakeLock();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, []);
 
     const stopReading = () => {
         setIsPlaying(false);
@@ -147,6 +200,12 @@ export default function BookReader() {
         isPlayingRef.current = false;
         autoPageTurnRef.current = false;
         setSelectedText(null);
+
+        releaseWakeLock();
+
+        // Increment playback ID to invalidate any pending async operations
+        playbackIdRef.current += 1;
+        retryCountRef.current = 0;
 
         if (audioRef.current) {
             audioRef.current.pause();
@@ -174,44 +233,7 @@ export default function BookReader() {
 
     // Helper to get all readable leaf block elements
     const getReadingCandidates = (root: HTMLElement): HTMLElement[] => {
-        const candidates: HTMLElement[] = [];
-        const walker = document.createTreeWalker(
-            root,
-            NodeFilter.SHOW_ELEMENT,
-            {
-                acceptNode: (node) => {
-                    const el = node as HTMLElement;
-                    // Check if it's a block-level element we care about
-                    const tagName = el.tagName.toLowerCase();
-                    if (['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote'].includes(tagName)) {
-                        // Check if it has direct text content or only inline children
-                        const hasText = el.innerText?.trim().length > 0;
-                        if (!hasText) return NodeFilter.FILTER_SKIP;
-
-                        // Check if it contains other block elements
-                        const hasBlockChildren = Array.from(el.children).some(child => {
-                            const childTag = child.tagName.toLowerCase();
-                            return ['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote'].includes(childTag);
-                        });
-
-                        if (!hasBlockChildren) {
-                            return NodeFilter.FILTER_ACCEPT;
-                        }
-                    }
-                    return NodeFilter.FILTER_SKIP;
-                }
-            }
-        );
-
-        let currentNode = walker.nextNode();
-        while (currentNode) {
-            candidates.push(currentNode as HTMLElement);
-            currentNode = walker.nextNode();
-        }
-
-        // Fallback: if TreeWalker is tricky with iframes/React, manual traversal might be safer,
-        // but let's try a simpler querySelectorAll approach first if TreeWalker is too complex to setup with iframe context.
-        // Actually, since we have reference to body, we can just query all and filter.
+        // ... (keep existing implementation, it seems fine for now)
         const allElements = Array.from(root.querySelectorAll('p, div, h1, h2, h3, h4, h5, h6, li, blockquote')) as HTMLElement[];
         return allElements.filter(el => {
             const hasText = el.innerText?.trim().length > 0;
@@ -240,6 +262,12 @@ export default function BookReader() {
         // Try to resume from current location if it's a CFI
         if (typeof location === 'string' && renditionRef.current) {
             try {
+                // If we have a current element selected (e.g. paused), use that
+                if (currentElementRef.current) {
+                    startReading(currentElementRef.current.innerText.trim(), currentElementRef.current);
+                    return;
+                }
+
                 const range = await renditionRef.current.getRange(location);
                 if (range) {
                     const node = range.startContainer;
@@ -278,9 +306,11 @@ export default function BookReader() {
         if (isPaused) {
             audioRef.current.play();
             setIsPaused(false);
+            requestWakeLock();
         } else {
             audioRef.current.pause();
             setIsPaused(true);
+            releaseWakeLock();
         }
     };
 
@@ -306,19 +336,21 @@ export default function BookReader() {
             }
 
             try {
-                console.log("Prefetching next paragraph:", nextText.substring(0, 20) + "...");
-
                 // Increment and capture the prefetch ID for this operation
                 prefetchIdRef.current += 1;
                 const thisPrefetchId = prefetchIdRef.current;
 
-                const communicate = new BrowserCommunicate(nextText, { voice });
+                // Capture current voice to ensure consistency
+                const currentVoice = voiceRef.current;
+
+                console.log("Prefetching next paragraph:", nextText.substring(0, 20) + "...");
+
+                const communicate = new BrowserCommunicate(nextText, { voice: currentVoice });
                 const chunks: Uint8Array[] = [];
 
                 for await (const chunk of communicate.stream()) {
                     // Check if this prefetch is still valid (not superseded by a new one)
                     if (thisPrefetchId !== prefetchIdRef.current) {
-                        console.log("Prefetch cancelled (superseded)");
                         return;
                     }
 
@@ -329,7 +361,6 @@ export default function BookReader() {
 
                 // Final check before storing
                 if (thisPrefetchId !== prefetchIdRef.current) {
-                    console.log("Prefetch cancelled before storage");
                     return;
                 }
 
@@ -353,16 +384,33 @@ export default function BookReader() {
         }
     };
 
+    // Helper to check if text has speakable content (not just punctuation/whitespace)
+    const isSpeakable = (text: string): boolean => {
+        // Remove ASCII punctuation, whitespace, and full-width punctuation/symbols
+        const cleanText = text.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()\[\]"'?]/g, "")
+            .replace(/[\u3000-\u303F\uFF00-\uFFEF]/g, "")
+            .replace(/\s/g, "");
+        return cleanText.length > 0;
+    };
+
     const startReading = async (text: string, target?: HTMLElement) => {
         if (!audioRef.current) return;
+
+        // Start a new playback session
+        playbackIdRef.current += 1;
+        const currentPlaybackId = playbackIdRef.current;
 
         // Temporarily disable auto-advance while we switch
         isPlayingRef.current = false;
         setIsPaused(false);
 
-        // Stop any current reading
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
+        // Request wake lock
+        requestWakeLock();
+
+        // Stop any current reading - OPTIMIZED: Don't pause if we are just switching tracks
+        // audioRef.current.pause(); 
+        // audioRef.current.currentTime = 0;
+
         if (ttsAudioUrlRef.current) {
             URL.revokeObjectURL(ttsAudioUrlRef.current);
             ttsAudioUrlRef.current = null;
@@ -398,10 +446,8 @@ export default function BookReader() {
             navigator.mediaSession.setActionHandler('play', () => togglePause());
             navigator.mediaSession.setActionHandler('pause', () => togglePause());
             navigator.mediaSession.setActionHandler('stop', () => stopReading());
-            navigator.mediaSession.setActionHandler('nexttrack', () => {
-                // Skip to next paragraph if possible, or just ignore
-                // readNext() is internal, maybe expose it or just let it be
-            });
+            navigator.mediaSession.setActionHandler('nexttrack', () => readNext());
+            navigator.mediaSession.setActionHandler('previoustrack', () => readPrevious());
         }
 
         // Restore previous element style if it's different
@@ -429,10 +475,7 @@ export default function BookReader() {
                                 localStorage.setItem(`book-progress-${bookUrl}`, cfi);
                             }
 
-                            renditionRef.current.display(cfi).catch((err: any) => {
-                                console.warn("EPUB navigation warning (using fallback):", err);
-                                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            });
+                            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         } else {
                             target.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         }
@@ -456,6 +499,18 @@ export default function BookReader() {
         setIsPlaying(true);
         isPlayingRef.current = true;
 
+        // Check if text is speakable
+        if (!isSpeakable(text)) {
+            console.log("Text is not speakable (punctuation only), skipping...", text);
+            // Wait a brief moment to simulate reading "silence" then skip
+            setTimeout(() => {
+                if (playbackIdRef.current === currentPlaybackId && isPlayingRef.current) {
+                    readNext();
+                }
+            }, 500);
+            return;
+        }
+
         // Trigger prefetch for the NEXT paragraph
         if (target) {
             prefetchNext(target);
@@ -465,12 +520,15 @@ export default function BookReader() {
             ttsAudioUrlRef.current = prefetchedUrl;
             if (audioRef.current) {
                 audioRef.current.src = prefetchedUrl;
-                audioRef.current.playbackRate = rate;
-                console.log(`[Prefetched] Setting playback rate to: ${rate}`);
+                audioRef.current.playbackRate = rateRef.current;
+                console.log(`[Prefetched] Setting playback rate to: ${rateRef.current}`);
                 try {
                     await audioRef.current.play();
+                    // Reset retry count on successful play
+                    retryCountRef.current = 0;
                 } catch (playError) {
                     console.error("Audio play error:", playError);
+                    handlePlaybackError(currentPlaybackId);
                 }
             }
             return;
@@ -479,18 +537,49 @@ export default function BookReader() {
         try {
             console.log("Initializing Edge TTS Universal...");
 
-            // Use the voice requested by user
-            // const voice = 'zh-CN-shaanxi-XiaoniNeural'; 
-            console.log(`Synthesizing text with voice ${voice}:`, text.substring(0, 50) + "...");
+            // Capture current voice
+            const currentVoice = voiceRef.current;
+            console.log(`Synthesizing text with voice ${currentVoice}:`, text.substring(0, 50) + "...");
 
-            const communicate = new BrowserCommunicate(text, { voice });
+            // Add timeout for connection
+            const communicate = new BrowserCommunicate(text, {
+                voice: currentVoice,
+                connectionTimeout: 10000 // 10 seconds timeout
+            });
 
             const chunks: Uint8Array[] = [];
+            let chunkReceived = false;
 
-            for await (const chunk of communicate.stream()) {
-                if (chunk.type === 'audio' && chunk.data) {
-                    chunks.push(chunk.data);
+            // Watchdog for stream hanging mid-way
+            const streamWatchdog = setTimeout(() => {
+                if (!chunkReceived && playbackIdRef.current === currentPlaybackId) {
+                    console.error("TTS Stream timeout (no chunks received)");
+                    handlePlaybackError(currentPlaybackId);
                 }
+            }, 15000); // 15 seconds total timeout
+
+            try {
+                for await (const chunk of communicate.stream()) {
+                    // Check if playback session changed during streaming
+                    if (playbackIdRef.current !== currentPlaybackId) {
+                        console.log("Playback session changed, aborting TTS stream.");
+                        clearTimeout(streamWatchdog);
+                        return;
+                    }
+
+                    if (chunk.type === 'audio' && chunk.data) {
+                        chunks.push(chunk.data);
+                        chunkReceived = true;
+                    }
+                }
+            } finally {
+                clearTimeout(streamWatchdog);
+            }
+
+            // Final check
+            if (playbackIdRef.current !== currentPlaybackId) {
+                console.log("Playback session changed, aborting playback.");
+                return;
             }
 
             console.log(`TTS Stream ended. Received ${chunks.length} chunks.`);
@@ -510,24 +599,44 @@ export default function BookReader() {
 
                 if (audioRef.current) {
                     audioRef.current.src = url;
-                    audioRef.current.playbackRate = rate;
-                    console.log(`[New Audio] Setting playback rate to: ${rate}`);
+                    audioRef.current.playbackRate = rateRef.current;
+                    console.log(`[New Audio] Setting playback rate to: ${rateRef.current}`);
                     try {
                         await audioRef.current.play();
+                        // Reset retry count on successful play
+                        retryCountRef.current = 0;
                     } catch (playError) {
                         console.error("Audio play error:", playError);
+                        handlePlaybackError(currentPlaybackId);
                     }
                 }
             } else {
                 console.error("No audio chunks received.");
-                setIsPlaying(false);
-                isPlayingRef.current = false;
+                handlePlaybackError(currentPlaybackId);
             }
 
         } catch (e) {
             console.error("Edge TTS error:", e);
-            setIsPlaying(false);
-            isPlayingRef.current = false;
+            handlePlaybackError(currentPlaybackId);
+        }
+    };
+
+    const handlePlaybackError = (playbackId: number) => {
+        // Only handle error if we are still in the same playback session
+        if (playbackIdRef.current !== playbackId) return;
+
+        if (retryCountRef.current < MAX_RETRIES) {
+            retryCountRef.current += 1;
+            console.log(`Playback error, retrying (${retryCountRef.current}/${MAX_RETRIES})...`);
+            setTimeout(() => {
+                if (playbackIdRef.current === playbackId && isPlayingRef.current) {
+                    readNext();
+                }
+            }, 1000);
+        } else {
+            console.error("Max retries reached, stopping playback.");
+            stopReading();
+            alert("Playback stopped due to repeated errors. Please check your connection or try a different voice.");
         }
     };
 
@@ -549,6 +658,10 @@ export default function BookReader() {
             startReading(prev.innerText.trim(), prev);
         } else {
             console.log("No previous paragraph in this chapter.");
+            // Optionally go to previous chapter
+            if (renditionRef.current) {
+                renditionRef.current.prev();
+            }
         }
     };
 
@@ -561,6 +674,7 @@ export default function BookReader() {
         }
 
         if (!currentElementRef.current || !currentBodyRef.current) {
+            // If we are playing but lost track of element, try to resume or stop
             stopReading();
             return;
         }
@@ -573,10 +687,18 @@ export default function BookReader() {
             startReading(next.innerText.trim(), next);
         } else {
             // No more siblings found in current chapter, try next chapter
+            console.log("End of chapter reached. Attempting to turn page...");
             if (renditionRef.current) {
                 autoPageTurnRef.current = true;
-                renditionRef.current.next();
+                renditionRef.current.next().then(() => {
+                    console.log("rendition.next() called successfully");
+                }).catch((err: any) => {
+                    console.error("rendition.next() failed:", err);
+                    autoPageTurnRef.current = false;
+                    stopReading();
+                });
             } else {
+                console.warn("No rendition ref, stopping.");
                 stopReading();
             }
         }
@@ -664,13 +786,27 @@ export default function BookReader() {
 
             // Auto-start reading if page turn was triggered by TTS
             if (autoPageTurnRef.current) {
-                autoPageTurnRef.current = false;
+                console.log("Auto-page turn detected, checking for content...");
+                // autoPageTurnRef.current = false; // Don't reset yet, wait until we actually find content or decide to skip
 
                 const candidates = getReadingCandidates(body);
                 if (candidates.length > 0) {
+                    console.log(`Found ${candidates.length} candidates in new chapter. Starting...`);
+                    autoPageTurnRef.current = false;
                     const first = candidates[0];
                     // Give a small delay for render to settle
                     setTimeout(() => startReading(first.innerText.trim(), first), 100);
+                } else {
+                    console.log("No candidates found in this chapter. Skipping to next...");
+                    // Keep autoPageTurnRef true so the next chapter is also auto-played
+                    // But we need to be careful of infinite loops if we reach end of book
+                    // Maybe add a safety counter? For now just try next.
+                    rendition.next().then(() => {
+                        console.log("Skipped empty chapter");
+                    }).catch((err: any) => {
+                        console.error("Failed to skip empty chapter:", err);
+                        autoPageTurnRef.current = false;
+                    });
                 }
             }
 

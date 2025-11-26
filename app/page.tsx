@@ -12,8 +12,15 @@ interface Book {
 export default function Home() {
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastReadBook, setLastReadBook] = useState<string | null>(null);
 
   useEffect(() => {
+    // Load last read book
+    const savedLastRead = localStorage.getItem('last-read-book');
+    if (savedLastRead) {
+      setLastReadBook(savedLastRead);
+    }
+
     fetch('/api/books')
       .then(res => res.json())
       .then(data => {
@@ -45,13 +52,22 @@ export default function Home() {
           <Link
             key={book.filename}
             href={`/read?book=${encodeURIComponent(book.filename)}`}
-            className="group relative flex flex-col bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden border border-gray-100"
+            className={`group relative flex flex-col bg-white rounded-lg shadow-sm hover:shadow-md transition-all overflow-hidden border ${book.filename === lastReadBook ? 'border-blue-400 ring-2 ring-blue-100' : 'border-gray-100'
+              }`}
           >
             <div className="aspect-[2/3] bg-gray-200 w-full relative overflow-hidden">
               {/* Placeholder for cover, could be extracted later */}
               <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-4xl font-serif select-none group-hover:scale-105 transition-transform duration-300">
                 📖
               </div>
+
+              {/* Last Read Badge */}
+              {book.filename === lastReadBook && (
+                <div className="absolute top-2 left-2 px-2 py-0.5 text-[10px] font-bold rounded-full bg-green-500 text-white shadow-sm z-10 flex items-center gap-1">
+                  <span>🕒</span> Last Read
+                </div>
+              )}
+
               {/* File Type Badge */}
               <div className={`absolute top-2 right-2 px-1.5 py-0.5 text-[10px] font-bold rounded text-white shadow-sm ${book.filename.toLowerCase().endsWith('.pdf') ? 'bg-red-500' : 'bg-blue-500'
                 }`}>
