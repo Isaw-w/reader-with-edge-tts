@@ -32,6 +32,7 @@ export default function BookReader() {
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const currentBodyRef = useRef<HTMLElement | null>(null);
     const ttsAudioUrlRef = useRef<string | null>(null);
+    const nextAudioDataRef = useRef<{ url: string, text: string, element: HTMLElement } | null>(null);
 
     const availableVoices = [
         { name: 'Xiaoni (Chinese)', value: 'zh-CN-shaanxi-XiaoniNeural' },
@@ -145,6 +146,11 @@ export default function BookReader() {
         if (ttsAudioUrlRef.current) {
             URL.revokeObjectURL(ttsAudioUrlRef.current);
             ttsAudioUrlRef.current = null;
+        }
+
+        if (nextAudioDataRef.current) {
+            URL.revokeObjectURL(nextAudioDataRef.current.url);
+            nextAudioDataRef.current = null;
         }
 
         // Restore original style
@@ -267,6 +273,58 @@ export default function BookReader() {
         }
     };
 
+    const prefetchNext = async (currentElement: HTMLElement) => {
+        if (!currentBodyRef.current) return;
+
+        const candidates = getReadingCandidates(currentBodyRef.current);
+        const currentIndex = candidates.indexOf(currentElement);
+
+        if (currentIndex !== -1 && currentIndex < candidates.length - 1) {
+            const nextElement = candidates[currentIndex + 1];
+            const nextText = nextElement.innerText.trim();
+
+            // Don't prefetch if we already have it
+            if (nextAudioDataRef.current && nextAudioDataRef.current.text === nextText) {
+                return;
+            }
+
+            // Clear old prefetch
+            if (nextAudioDataRef.current) {
+                URL.revokeObjectURL(nextAudioDataRef.current.url);
+                nextAudioDataRef.current = null;
+            }
+
+            try {
+                console.log("Prefetching next paragraph:", nextText.substring(0, 20) + "...");
+                const communicate = new BrowserCommunicate(nextText, { voice });
+                const chunks: Uint8Array[] = [];
+
+                for await (const chunk of communicate.stream()) {
+                    if (chunk.type === 'audio' && chunk.data) {
+                        chunks.push(chunk.data);
+                    }
+                }
+
+                if (chunks.length > 0) {
+                    const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+                    const audioData = new Uint8Array(totalLength);
+                    let offset = 0;
+                    for (const chunk of chunks) {
+                        audioData.set(chunk, offset);
+                        offset += chunk.length;
+                    }
+
+                    const blob = new Blob([audioData], { type: 'audio/mp3' });
+                    const url = URL.createObjectURL(blob);
+                    nextAudioDataRef.current = { url, text: nextText, element: nextElement };
+                    console.log("Prefetch complete.");
+                }
+            } catch (e) {
+                console.warn("Prefetch failed:", e);
+            }
+        }
+    };
+
     const startReading = async (text: string, target?: HTMLElement) => {
         if (!audioRef.current) return;
 
@@ -282,11 +340,26 @@ export default function BookReader() {
             ttsAudioUrlRef.current = null;
         }
 
+        // Check if we have prefetched audio for this text
+        let prefetchedUrl: string | null = null;
+        if (nextAudioDataRef.current && nextAudioDataRef.current.text === text) {
+            console.log("Using prefetched audio!");
+            prefetchedUrl = nextAudioDataRef.current.url;
+            // Clear ref so we don't revoke it immediately, but don't revoke the URL yet as we are using it
+            nextAudioDataRef.current = null;
+        } else {
+            // If we are starting a new read that isn't the prefetched one, clear the prefetch
+            if (nextAudioDataRef.current) {
+                URL.revokeObjectURL(nextAudioDataRef.current.url);
+                nextAudioDataRef.current = null;
+            }
+        }
+
         // Setup Media Session
         if ('mediaSession' in navigator) {
             navigator.mediaSession.metadata = new MediaMetadata({
                 title: searchParams.get('book') || 'Book',
-                artist: 'Booker Reader',
+                artist: 'Natural Reader',
                 album: 'Audiobook',
                 artwork: [
                     { src: '/file.svg', sizes: '96x96', type: 'image/svg+xml' },
@@ -354,6 +427,25 @@ export default function BookReader() {
 
         setIsPlaying(true);
         isPlayingRef.current = true;
+
+        // Trigger prefetch for the NEXT paragraph
+        if (target) {
+            prefetchNext(target);
+        }
+
+        if (prefetchedUrl) {
+            ttsAudioUrlRef.current = prefetchedUrl;
+            if (audioRef.current) {
+                audioRef.current.src = prefetchedUrl;
+                audioRef.current.playbackRate = rate;
+                try {
+                    await audioRef.current.play();
+                } catch (playError) {
+                    console.error("Audio play error:", playError);
+                }
+            }
+            return;
+        }
 
         try {
             console.log("Initializing Edge TTS Universal...");

@@ -1,4 +1,4 @@
-# Booker Reader
+# Natural Reader
 
 A web-based EPUB reader featuring high-quality Text-to-Speech (Edge TTS), persistent audio controls, and a mobile-friendly design.
 
