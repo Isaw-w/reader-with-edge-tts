@@ -614,9 +614,11 @@ export default function BookReader() {
                     font-size: 1.25rem !important;
                     line-height: 1.8 !important;
                     margin-bottom: 1em !important;
+                    cursor: pointer !important;
                 }
                 div, span, h1, h2, h3, h4, h5, h6 {
                     line-height: 1.8 !important;
+                    cursor: pointer !important;
                 }
                 .long-press-indicator {
                     position: absolute;
