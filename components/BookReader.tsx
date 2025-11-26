@@ -4,7 +4,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ReactReader, ReactReaderStyle } from 'react-reader';
 import { useSearchParams } from 'next/navigation';
 import { BrowserCommunicate } from '../utils/edge-tts-universal';
-import PdfReader, { PdfReaderHandle } from './PdfReader';
+import dynamic from 'next/dynamic';
+import { PdfReaderHandle } from './PdfReader';
+
+const PdfReader = dynamic(() => import('./PdfReader'), { ssr: false });
 
 
 export default function BookReader() {
