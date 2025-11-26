@@ -493,8 +493,28 @@ export default function BookReader() {
                 div, span, h1, h2, h3, h4, h5, h6 {
                     line-height: 1.8 !important;
                 }
+                .long-press-indicator {
+                    position: absolute;
+                    width: 80px;
+                    height: 80px;
+                    background-color: rgba(0, 0, 0, 0.15);
+                    border-radius: 50%;
+                    transform: translate(-50%, -50%) scale(0);
+                    pointer-events: none;
+                    transition: transform 0.5s ease-out;
+                    z-index: 10000;
+                    display: none;
+                }
+                .long-press-indicator.active {
+                    transform: translate(-50%, -50%) scale(1);
+                }
             `;
             doc.head.appendChild(style);
+
+            // Create indicator element
+            const indicator = doc.createElement('div');
+            indicator.className = 'long-press-indicator';
+            body.appendChild(indicator);
 
             // Selection change listener
             doc.addEventListener('selectionchange', () => {
@@ -529,15 +549,29 @@ export default function BookReader() {
             const handleStart = (e: TouchEvent | MouseEvent) => {
                 if (pressTimer) clearTimeout(pressTimer);
 
+                let clientX, clientY;
                 if (e instanceof TouchEvent) {
-                    startX = e.touches[0].clientX;
-                    startY = e.touches[0].clientY;
+                    clientX = e.touches[0].clientX;
+                    clientY = e.touches[0].clientY;
                 } else {
-                    startX = (e as MouseEvent).clientX;
-                    startY = (e as MouseEvent).clientY;
+                    clientX = (e as MouseEvent).clientX;
+                    clientY = (e as MouseEvent).clientY;
                 }
 
+                startX = clientX;
+                startY = clientY;
+
+                // Show indicator
+                indicator.style.left = `${clientX}px`;
+                indicator.style.top = `${clientY}px`;
+                indicator.style.display = 'block';
+                // Force reflow
+                void indicator.offsetWidth;
+                indicator.classList.add('active');
+
                 pressTimer = setTimeout(() => {
+                    indicator.classList.remove('active');
+                    indicator.style.display = 'none';
                     handleLongPress(e);
                 }, LONG_PRESS_DURATION);
             };
@@ -547,6 +581,8 @@ export default function BookReader() {
                     clearTimeout(pressTimer);
                     pressTimer = null;
                 }
+                indicator.classList.remove('active');
+                indicator.style.display = 'none';
             };
 
             const handleMove = (e: TouchEvent | MouseEvent) => {
@@ -565,6 +601,8 @@ export default function BookReader() {
                         clearTimeout(pressTimer);
                         pressTimer = null;
                     }
+                    indicator.classList.remove('active');
+                    indicator.style.display = 'none';
                 }
             }
 
