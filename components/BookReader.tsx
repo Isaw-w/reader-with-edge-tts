@@ -741,7 +741,7 @@ export default function BookReader() {
             body.addEventListener('mouseup', handleEnd);
             body.addEventListener('mousemove', handleMove);
         });
-    }, [rate]);
+    }, [rate, voice]);
 
     const handleLongPress = (e: TouchEvent | MouseEvent) => {
         const target = e.target as HTMLElement;
