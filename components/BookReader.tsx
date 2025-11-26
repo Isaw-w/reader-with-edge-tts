@@ -828,6 +828,7 @@ export default function BookReader() {
                     locationChanged={handleLocationChanged}
                     getRendition={getRendition}
                     swipeable={false} // Disable swipe to fix text selection on mobile
+                    showToc={true} // Enable table of contents and navigation
                     epubOptions={{
                         // Using default paginated view for better performance and stability
                         allowScriptedContent: true,
