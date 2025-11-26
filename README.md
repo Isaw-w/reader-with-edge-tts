@@ -4,9 +4,9 @@ A web-based EPUB reader featuring high-quality Text-to-Speech (Edge TTS), persis
 
 ## Features
 
-- **High-Quality TTS**: Uses Microsoft Edge's neural voices for natural-sounding speech.
-- **Smart Navigation**:
-    - **Auto Page Turn**: Automatically flips pages as you read.
+- **Enhanced TTS Controls**: Persistent mini-player, voice selection (Chinese/English), speed control, and paragraph navigation.
+- **Visual Feedback**: "Ripple" animation on long-press to indicate text selection.
+- **Progress Persistence**: Automatically saves your reading position and settings.
     - **Paragraph Highlighting**: Highlights the exact paragraph being read.
     - **Resume Reading**: Remembers your exact position (paragraph-level) and resumes from there.
 - **Mini Player**: A persistent audio panel that stays out of your way while keeping controls accessible.
